@@ -188,6 +188,15 @@ def delete_classroom(id):
     flash('تم حذف الفصل بنجاح')
     return redirect(url_for('manage'))
 
+@app.route('/delete_teacher/<int:id>', methods=['POST'])
+def delete_teacher(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM teachers WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    flash('تم حذف المعلم بنجاح')
+    return redirect(url_for('manage'))
 
 # التأكد من وجود المجلد وإمكانية الكتابة فيه
 if not os.path.exists('/tmp'):
