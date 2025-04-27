@@ -1,14 +1,65 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Required for flash messages
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here')
+
+# تحديد مسار قاعدة البيانات
+DATABASE_PATH = '/tmp/school_attendance.db'
+
+def init_db():
+    """تهيئة قاعدة البيانات وإنشاء الجداول الأساسية"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # إنشاء جدول المعلمين
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS teachers (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+        ''')
+        
+        # إنشاء جدول الفصول
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS classrooms (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+        ''')
+        
+        # إنشاء جدول الحضور
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS attendance (
+                id INTEGER PRIMARY KEY,
+                teacher_id INTEGER,
+                class_name TEXT,
+                classroom_id INTEGER,
+                entry_time DATETIME,
+                FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+                FOREIGN KEY (classroom_id) REFERENCES classrooms (id)
+            )
+        ''')
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"خطأ في تهيئة قاعدة البيانات: {e}")
+        raise
+    finally:
+        conn.close()
 
 def get_db():
-    conn = sqlite3.connect('school_attendance.db')
+    """إنشاء اتصال بقاعدة البيانات"""
+    conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+# تهيئة قاعدة البيانات عند بدء التطبيق
+with app.app_context():
+    if not os.path.exists(DATABASE_PATH):
+        init_db()
 
 @app.route('/')
 def index():
@@ -104,6 +155,13 @@ def delete_attendance(id):
     conn.close()
     flash('تم حذف السجل بنجاح')
     return redirect(url_for('attendance'))
+
+# إضافة هذا الكود في بداية الملف
+import os
+
+# التأكد من وجود المجلد وإمكانية الكتابة فيه
+if not os.path.exists('/tmp'):
+    os.makedirs('/tmp', exist_ok=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
