@@ -156,8 +156,18 @@ def delete_attendance(id):
     flash('تم حذف السجل بنجاح')
     return redirect(url_for('attendance'))
 
-# إضافة هذا الكود في بداية الملف
-import os
+@app.route('/edit_teacher/<int:id>', methods=['POST'])
+def edit_teacher(id):
+    name = request.form['name']
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE teachers SET name = ? WHERE id = ?", (name, id))
+    conn.commit()
+    conn.close()
+    flash('تم تعديل المعلم بنجاح')
+    return redirect(url_for('manage'))
+
+
 
 # التأكد من وجود المجلد وإمكانية الكتابة فيه
 if not os.path.exists('/tmp'):

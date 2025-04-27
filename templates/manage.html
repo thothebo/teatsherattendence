@@ -85,8 +85,7 @@
                                     <form action="{{ url_for('edit_teacher', id=teacher['id']) }}" method="post" class="edit-form d-none">
                                         <div class="input-group">
                                             <input type="text" class="form-control" name="name" value="{{ teacher['name'] }}" required>
-                                            <button type="submit" class="btn btn-success btn-sm">حفظ</button>
-                                            <button type="button" class="btn btn-secondary btn-sm cancel-edit">إلغاء</button>
+                                            <button type="submit" class="btn btn-primary">حفظ التعديل</button>
                                         </div>
                                     </form>
                                     <span class="teacher-name">{{ teacher['name'] }}</span>
