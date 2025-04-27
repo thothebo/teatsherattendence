@@ -167,6 +167,26 @@ def edit_teacher(id):
     flash('تم تعديل المعلم بنجاح')
     return redirect(url_for('manage'))
 
+@app.route('/edit_classroom/<int:id>', methods=['POST'])
+def edit_classroom(id):
+    name = request.form['name']
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE classrooms SET name = ? WHERE id = ?", (name, id))
+    conn.commit()
+    conn.close()
+    flash('تم تعديل الفصل بنجاح')
+    return redirect(url_for('manage'))
+
+@app.route('/delete_classroom/<int:id>', methods=['POST'])
+def delete_classroom(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM classrooms WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    flash('تم حذف الفصل بنجاح')
+    return redirect(url_for('manage'))
 
 
 # التأكد من وجود المجلد وإمكانية الكتابة فيه
