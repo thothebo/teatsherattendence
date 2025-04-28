@@ -43,6 +43,16 @@ def init_db():
                 FOREIGN KEY (classroom_id) REFERENCES classrooms (id)
             )
         ''')
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS supervision (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher_id INTEGER NOT NULL,
+                date DATE NOT NULL,
+                shift_type TEXT NOT NULL,
+                notes TEXT,
+                FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+            )
+        """)
         conn.commit()
     except sqlite3.Error as e:
         print(f"خطأ في تهيئة قاعدة البيانات: {e}")
@@ -209,6 +219,186 @@ def delete_teacher(id):
 # التأكد من وجود المجلد وإمكانية الكتابة فيه
 if not os.path.exists('/tmp'):
     os.makedirs('/tmp', exist_ok=True)
+
+@app.route('/supervision')
+def supervision():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM teachers")
+    teachers = cursor.fetchall()
+    cursor.execute("""
+        SELECT supervision.id, teachers.name as teacher_name, 
+               supervision.date, supervision.shift_type, supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        ORDER BY supervision.date DESC
+    """)
+    supervisions = cursor.fetchall()
+    conn.close()
+    return render_template('supervision.html', teachers=teachers, supervisions=supervisions)
+
+@app.route('/add_supervision', methods=['POST'])
+def add_supervision():
+    teacher_id = request.form['teacher_id']
+    shift_type = request.form['shift_type']
+    notes = request.form['notes']
+    date = datetime.now().date()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO supervision (teacher_id, date, shift_type, notes)
+        VALUES (?, ?, ?, ?)
+    """, (teacher_id, date, shift_type, notes))
+    conn.commit()
+    conn.close()
+    flash('تم تسجيل المناوبة بنجاح')
+    return redirect(url_for('supervision'))
+
+@app.route('/delete_supervision/<int:id>', methods=['POST'])
+def delete_supervision(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM supervision WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    flash('تم حذف سجل المناوبة بنجاح')
+    return redirect(url_for('supervision'))
+
+@app.route('/edit_teacher/<int:id>', methods=['POST'])
+def edit_teacher(id):
+    name = request.form['name']
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE teachers SET name = ? WHERE id = ?", (name, id))
+    conn.commit()
+    conn.close()
+    flash('تم تعديل المعلم بنجاح')
+    return redirect(url_for('manage'))
+
+@app.route('/edit_classroom/<int:id>', methods=['POST'])
+def edit_classroom(id):
+    name = request.form['name']
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE classrooms SET name = ? WHERE id = ?", (name, id))
+    conn.commit()
+    conn.close()
+    flash('تم تعديل الفصل بنجاح')
+    return redirect(url_for('manage'))
+
+@app.route('/delete_classroom/<int:id>', methods=['POST'])
+def delete_classroom(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM classrooms WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    flash('تم حذف الفصل بنجاح')
+    return redirect(url_for('manage'))
+
+@app.route('/delete_teacher/<int:id>', methods=['POST'])
+def delete_teacher(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # First delete related attendance records
+        cursor.execute("DELETE FROM attendance WHERE teacher_id = ?", (id,))
+        # Then delete the teacher
+        cursor.execute("DELETE FROM teachers WHERE id = ?", (id,))
+        conn.commit()
+        flash('تم حذف المعلم بنجاح')
+    except sqlite3.Error as e:
+        conn.rollback()
+        flash('حدث خطأ أثناء حذف المعلم')
+    finally:
+        conn.close()
+    return redirect(url_for('manage'))
+
+# التأكد من وجود المجلد وإمكانية الكتابة فيه
+if not os.path.exists('/tmp'):
+    os.makedirs('/tmp', exist_ok=True)
+
+@app.route('/daily_report')
+def daily_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.now().date()
+    
+    # تقرير الحضور اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, attendance.class_name, 
+               classrooms.name as classroom_name, attendance.entry_time
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) = ?
+        ORDER BY attendance.entry_time DESC
+    """, (today,))
+    daily_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, supervision.shift_type, 
+               supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) = ?
+        ORDER BY supervision.shift_type
+    """, (today,))
+    daily_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('daily_report.html', 
+                         attendance=daily_attendance, 
+                         supervision=daily_supervision,
+                         date=today)
+
+@app.route('/weekly_report')
+def weekly_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # حساب تاريخ بداية ونهاية الأسبوع
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    # تقرير الحضور الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as attendance_count,
+            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY attendance_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as supervision_count,
+            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY supervision_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('weekly_report.html',
+                         attendance=weekly_attendance,
+                         supervision=weekly_supervision,
+                         start_date=start_of_week,
+                         end_date=end_of_week)
 
 if __name__ == '__main__':
     app.run(debug=True)

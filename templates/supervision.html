@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متابعة الإشراف اليومي والمناوبة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <ul class="nav nav-pills justify-content-center mb-4">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('manage') }}">إدارة المعلمين والفصول</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('attendance') }}">تسجيل الحضور</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('supervision') }}">الإشراف والمناوبة</a>
+            </li>
+        </ul>
+
+        <h1 class="text-center mb-4">متابعة الإشراف اليومي والمناوبة</h1>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">تسجيل مناوبة جديدة</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('add_supervision') }}" method="post">
+                            <div class="mb-3">
+                                <label for="teacherSelect" class="form-label">المعلم:</label>
+                                <select class="form-select" id="teacherSelect" name="teacher_id" required>
+                                    <option value="">اختر المعلم</option>
+                                    {% for teacher in teachers %}
+                                        <option value="{{ teacher['id'] }}">{{ teacher['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="shiftType" class="form-label">نوع المناوبة:</label>
+                                <select class="form-select" id="shiftType" name="shift_type" required>
+                                    <option value="صباحية">صباحية</option>
+                                    <option value="مسائية">مسائية</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">ملاحظات:</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">تسجيل المناوبة</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">سجل المناوبات</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>المعلم</th>
+                                        <th>نوع المناوبة</th>
+                                        <th>ملاحظات</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for supervision in supervisions %}
+                                        <tr>
+                                            <td>{{ supervision['date'] }}</td>
+                                            <td>{{ supervision['teacher_name'] }}</td>
+                                            <td>{{ supervision['shift_type'] }}</td>
+                                            <td>{{ supervision['notes'] }}</td>
+                                            <td>
+                                                <form action="{{ url_for('delete_supervision', id=supervision['id']) }}" method="post" class="d-inline">
+                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('هل أنت متأكد من حذف هذا السجل؟')">حذف</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
