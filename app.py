@@ -401,9 +401,6 @@ def weekly_report():
                          start_date=start_of_week,
                          end_date=end_of_week)
 
-# Remove all duplicate route definitions and keep only one instance of each route
-
-# Keep only one instance at the end of the file
 if __name__ == '__main__':
     app.run(debug=True)
 
