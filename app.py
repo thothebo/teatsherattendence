@@ -1,12 +1,12 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, g
 import sqlite3
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 
-# Use a persistent storage location
+# تعريف واحد لمسار قاعدة البيانات
 DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
 
 def init_db():
@@ -492,30 +492,356 @@ def weekly_report():
 if __name__ == '__main__':
     app.run(debug=True)
 
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
+if __name__ == '__main__':
+    app.run(debug=True)
 
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
+@app.route('/daily_report')
+def daily_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.now().date()
+    
+    # تقرير الحضور اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, attendance.class_name, 
+               classrooms.name as classroom_name, attendance.entry_time
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) = ?
+        ORDER BY attendance.entry_time DESC
+    """, (today,))
+    daily_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, supervision.shift_type, 
+               supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) = ?
+        ORDER BY supervision.shift_type
+    """, (today,))
+    daily_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('daily_report.html', 
+                         attendance=daily_attendance, 
+                         supervision=daily_supervision,
+                         date=today)
 
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
+@app.route('/weekly_report')
+def weekly_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # حساب تاريخ بداية ونهاية الأسبوع
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    # تقرير الحضور الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as attendance_count,
+            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY attendance_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as supervision_count,
+            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY supervision_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('weekly_report.html',
+                         attendance=weekly_attendance,
+                         supervision=weekly_supervision,
+                         start_date=start_of_week,
+                         end_date=end_of_week)
 
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
+if __name__ == '__main__':
+    app.run(debug=True)
 
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
+if __name__ == '__main__':
+    app.run(debug=True)
+
+@app.route('/daily_report')
+def daily_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.now().date()
+    
+    # تقرير الحضور اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, attendance.class_name, 
+               classrooms.name as classroom_name, attendance.entry_time
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) = ?
+        ORDER BY attendance.entry_time DESC
+    """, (today,))
+    daily_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, supervision.shift_type, 
+               supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) = ?
+        ORDER BY supervision.shift_type
+    """, (today,))
+    daily_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('daily_report.html', 
+                         attendance=daily_attendance, 
+                         supervision=daily_supervision,
+                         date=today)
+
+@app.route('/weekly_report')
+def weekly_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # حساب تاريخ بداية ونهاية الأسبوع
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    # تقرير الحضور الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as attendance_count,
+            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY attendance_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as supervision_count,
+            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY supervision_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('weekly_report.html',
+                         attendance=weekly_attendance,
+                         supervision=weekly_supervision,
+                         start_date=start_of_week,
+                         end_date=end_of_week)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+@app.route('/daily_report')
+def daily_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.now().date()
+    
+    # تقرير الحضور اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, attendance.class_name, 
+               classrooms.name as classroom_name, attendance.entry_time
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) = ?
+        ORDER BY attendance.entry_time DESC
+    """, (today,))
+    daily_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, supervision.shift_type, 
+               supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) = ?
+        ORDER BY supervision.shift_type
+    """, (today,))
+    daily_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('daily_report.html', 
+                         attendance=daily_attendance, 
+                         supervision=daily_supervision,
+                         date=today)
+
+@app.route('/weekly_report')
+def weekly_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # حساب تاريخ بداية ونهاية الأسبوع
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    # تقرير الحضور الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as attendance_count,
+            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY attendance_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as supervision_count,
+            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY supervision_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('weekly_report.html',
+                         attendance=weekly_attendance,
+                         supervision=weekly_supervision,
+                         start_date=start_of_week,
+                         end_date=end_of_week)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+@app.route('/daily_report')
+def daily_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.now().date()
+    
+    # تقرير الحضور اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, attendance.class_name, 
+               classrooms.name as classroom_name, attendance.entry_time
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) = ?
+        ORDER BY attendance.entry_time DESC
+    """, (today,))
+    daily_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة اليومي
+    cursor.execute("""
+        SELECT teachers.name as teacher_name, supervision.shift_type, 
+               supervision.notes
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) = ?
+        ORDER BY supervision.shift_type
+    """, (today,))
+    daily_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('daily_report.html', 
+                         attendance=daily_attendance, 
+                         supervision=daily_supervision,
+                         date=today)
+
+@app.route('/weekly_report')
+def weekly_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # حساب تاريخ بداية ونهاية الأسبوع
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    # تقرير الحضور الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as attendance_count,
+            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
+        FROM attendance
+        JOIN teachers ON teachers.id = attendance.teacher_id
+        JOIN classrooms ON classrooms.id = attendance.classroom_id
+        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY attendance_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_attendance = cursor.fetchall()
+    
+    # تقرير المناوبة الأسبوعي
+    cursor.execute("""
+        SELECT 
+            teachers.name as teacher_name,
+            COUNT(*) as supervision_count,
+            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
+        FROM supervision
+        JOIN teachers ON teachers.id = supervision.teacher_id
+        WHERE DATE(supervision.date) BETWEEN ? AND ?
+        GROUP BY teachers.id, teachers.name
+        ORDER BY supervision_count DESC
+    """, (start_of_week, end_of_week))
+    weekly_supervision = cursor.fetchall()
+    
+    conn.close()
+    return render_template('weekly_report.html',
+                         attendance=weekly_attendance,
+                         supervision=weekly_supervision,
+                         start_date=start_of_week,
+                         end_date=end_of_week)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 @app.route('/daily_report')
 def daily_report():
@@ -708,984 +1034,3 @@ def weekly_report():
                          end_date=end_of_week)
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# تعريف مسار قاعدة البيانات في مكان دائم
-DATABASE = 'database.db'
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = sqlite3.connect(DATABASE)
-        g.sqlite_db.row_factory = sqlite3.Row
-    return g.sqlite_db
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# حذف الكود القديم الخاص بمجلد tmp
-# if not os.path.exists('/tmp'):
-#     os.makedirs('/tmp', exist_ok=True)
-
-@app.route('/daily_report')
-def daily_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    
-    # تقرير الحضور اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, attendance.class_name, 
-               classrooms.name as classroom_name, attendance.entry_time
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) = ?
-        ORDER BY attendance.entry_time DESC
-    """, (today,))
-    daily_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة اليومي
-    cursor.execute("""
-        SELECT teachers.name as teacher_name, supervision.shift_type, 
-               supervision.notes
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) = ?
-        ORDER BY supervision.shift_type
-    """, (today,))
-    daily_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('daily_report.html', 
-                         attendance=daily_attendance, 
-                         supervision=daily_supervision,
-                         date=today)
-
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
-
-if __name__ == '__main__
