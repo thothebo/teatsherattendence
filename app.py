@@ -270,55 +270,6 @@ def delete_supervision(id):
     flash('تم حذف سجل المناوبة بنجاح')
     return redirect(url_for('supervision'))
 
-@app.route('/edit_teacher/<int:id>', methods=['POST'])
-def edit_teacher(id):
-    name = request.form['name']
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE teachers SET name = ? WHERE id = ?", (name, id))
-    conn.commit()
-    conn.close()
-    flash('تم تعديل المعلم بنجاح')
-    return redirect(url_for('manage'))
-
-@app.route('/edit_classroom/<int:id>', methods=['POST'])
-def edit_classroom(id):
-    name = request.form['name']
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE classrooms SET name = ? WHERE id = ?", (name, id))
-    conn.commit()
-    conn.close()
-    flash('تم تعديل الفصل بنجاح')
-    return redirect(url_for('manage'))
-
-@app.route('/delete_classroom/<int:id>', methods=['POST'])
-def delete_classroom(id):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM classrooms WHERE id = ?", (id,))
-    conn.commit()
-    conn.close()
-    flash('تم حذف الفصل بنجاح')
-    return redirect(url_for('manage'))
-
-@app.route('/delete_teacher/<int:id>', methods=['POST'])
-def delete_teacher(id):
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        # First delete related attendance records
-        cursor.execute("DELETE FROM attendance WHERE teacher_id = ?", (id,))
-        # Then delete the teacher
-        cursor.execute("DELETE FROM teachers WHERE id = ?", (id,))
-        conn.commit()
-        flash('تم حذف المعلم بنجاح')
-    except sqlite3.Error as e:
-        conn.rollback()
-        flash('حدث خطأ أثناء حذف المعلم')
-    finally:
-        conn.close()
-    return redirect(url_for('manage'))
 
 @app.route('/daily_report')
 def daily_report():
