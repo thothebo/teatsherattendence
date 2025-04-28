@@ -306,54 +306,7 @@ def daily_report():
                          supervision=daily_supervision,
                          date=today)
 
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
 @app.route('/weekly_report')
 def weekly_report():
@@ -404,54 +357,7 @@ def weekly_report():
 if __name__ == '__main__':
     app.run(debug=True)
 
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
 # تعريف مسار قاعدة البيانات في مكان دائم
 DATABASE = 'database.db'
@@ -513,54 +419,7 @@ def daily_report():
                          supervision=daily_supervision,
                          date=today)
 
-@app.route('/weekly_report')
-def weekly_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # حساب تاريخ بداية ونهاية الأسبوع
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    # تقرير الحضور الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as attendance_count,
-            GROUP_CONCAT(DISTINCT classrooms.name) as classrooms
-        FROM attendance
-        JOIN teachers ON teachers.id = attendance.teacher_id
-        JOIN classrooms ON classrooms.id = attendance.classroom_id
-        WHERE DATE(attendance.entry_time) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY attendance_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_attendance = cursor.fetchall()
-    
-    # تقرير المناوبة الأسبوعي
-    cursor.execute("""
-        SELECT 
-            teachers.name as teacher_name,
-            COUNT(*) as supervision_count,
-            GROUP_CONCAT(DISTINCT supervision.shift_type) as shift_types
-        FROM supervision
-        JOIN teachers ON teachers.id = supervision.teacher_id
-        WHERE DATE(supervision.date) BETWEEN ? AND ?
-        GROUP BY teachers.id, teachers.name
-        ORDER BY supervision_count DESC
-    """, (start_of_week, end_of_week))
-    weekly_supervision = cursor.fetchall()
-    
-    conn.close()
-    return render_template('weekly_report.html',
-                         attendance=weekly_attendance,
-                         supervision=weekly_supervision,
-                         start_date=start_of_week,
-                         end_date=end_of_week)
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
