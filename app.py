@@ -192,10 +192,18 @@ def delete_classroom(id):
 def delete_teacher(id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM teachers WHERE id = ?", (id,))
-    conn.commit()
-    conn.close()
-    flash('تم حذف المعلم بنجاح')
+    try:
+        # First delete related attendance records
+        cursor.execute("DELETE FROM attendance WHERE teacher_id = ?", (id,))
+        # Then delete the teacher
+        cursor.execute("DELETE FROM teachers WHERE id = ?", (id,))
+        conn.commit()
+        flash('تم حذف المعلم بنجاح')
+    except sqlite3.Error as e:
+        conn.rollback()
+        flash('حدث خطأ أثناء حذف المعلم')
+    finally:
+        conn.close()
     return redirect(url_for('manage'))
 
 # التأكد من وجود المجلد وإمكانية الكتابة فيه
