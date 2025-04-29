@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="container mt-4">
-        <!-- شريط التنقل الجديد -->
+        <!-- شريط التنقل -->
         <ul class="nav nav-pills justify-content-center mb-4">
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
@@ -29,7 +29,16 @@
                 <a class="nav-link" href="{{ url_for('manage') }}">إدارة المعلمين والفصول</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for('attendance') }}">تسجيل الغياب</a>
+                <a class="nav-link active" href="{{ url_for('attendance') }}">تسجيل الحضور</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('supervision') }}">المناوبة</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('daily_report') }}">التقرير اليومي</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('weekly_report') }}">التقرير الأسبوعي</a>
             </li>
         </ul>
 
