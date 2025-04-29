@@ -317,7 +317,8 @@ def weekly_report():
                          attendance=weekly_attendance,
                          supervision=weekly_supervision,
                          start_date=start_of_week,
-                         end_date=end_of_week)
+                         end_date=end_of_week,
+                         now=datetime.now())  # إضافة التاريخ الحالي
 
 @app.route('/daily_report')
 def daily_report():
