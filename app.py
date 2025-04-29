@@ -80,6 +80,7 @@ with app.app_context():
     if not os.path.exists(DATABASE):
         init_db()
 
+# تعديل كل دالة عرض لتشمل التاريخ الحالي
 @app.route('/')
 def index():
     conn = get_db()
@@ -94,7 +95,7 @@ def index():
     """)
     attendance = cursor.fetchall()
     conn.close()
-    return render_template('index.html', attendance=attendance)
+    return render_template('index.html', attendance=attendance, now=datetime.now())
 
 @app.route('/manage')
 def manage():
@@ -105,7 +106,7 @@ def manage():
     cursor.execute("SELECT id, name FROM classrooms")
     classrooms = cursor.fetchall()
     conn.close()
-    return render_template('manage.html', teachers=teachers, classrooms=classrooms)
+    return render_template('manage.html', teachers=teachers, classrooms=classrooms, now=datetime.now())
 
 @app.route('/attendance')
 def attendance():
@@ -125,7 +126,7 @@ def attendance():
     """)
     attendance = cursor.fetchall()
     conn.close()
-    return render_template('attendance.html', teachers=teachers, classrooms=classrooms, attendance=attendance)
+    return render_template('attendance.html', teachers=teachers, classrooms=classrooms, attendance=attendance, now=datetime.now())
 
 @app.route('/add_teacher', methods=['POST'])
 def add_teacher():
@@ -240,7 +241,7 @@ def supervision():
     """)
     supervisions = cursor.fetchall()
     conn.close()
-    return render_template('supervision.html', teachers=teachers, supervisions=supervisions)
+    return render_template('supervision.html', teachers=teachers, supervisions=supervisions, now=datetime.now())
 
 @app.route('/add_supervision', methods=['POST'])
 def add_supervision():
@@ -353,7 +354,8 @@ def daily_report():
     return render_template('daily_report.html', 
                          attendance=daily_attendance, 
                          supervision=daily_supervision,
-                         date=today)
+                         date=today,
+                         now=datetime.now())
 
 if __name__ == '__main__':
     app.run(debug=True)
