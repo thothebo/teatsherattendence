@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 
-# تعريف واحد لمسار قاعدة البيانات
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
+# تعديل مسار قاعدة البيانات
+DATABASE = os.path.join('/opt/render/project/data', 'database.db')
 
 def init_db():
     """تهيئة قاعدة البيانات وإنشاء الجداول الأساسية"""

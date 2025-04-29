@@ -8,80 +8,86 @@
 </head>
 <body>
     <div class="container mt-4">
+        <!-- شريط التنقل -->
         <ul class="nav nav-pills justify-content-center mb-4">
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('daily_report') }}">التقرير اليومي</a>
+                <a class="nav-link" href="{{ url_for('manage') }}">إدارة المعلمين والفصول</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('attendance') }}">تسجيل الحضور</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('supervision') }}">المناوبة</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('daily_report') }}">التقرير اليومي</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('weekly_report') }}">التقرير الأسبوعي</a>
             </li>
         </ul>
 
-        <h1 class="text-center mb-4">التقرير اليومي - {{ date.strftime('%Y-%m-%d') }}</h1>
+        <h2 class="text-center mb-4">التقرير اليومي - {{ date }}</h2>
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">تقرير الحضور اليومي</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>المعلم</th>
-                                        <th>الحصة</th>
-                                        <th>الفصل</th>
-                                        <th>وقت الدخول</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in attendance %}
-                                    <tr>
-                                        <td>{{ record['teacher_name'] }}</td>
-                                        <td>{{ record['class_name'] }}</td>
-                                        <td>{{ record['classroom_name'] }}</td>
-                                        <td>{{ record['entry_time'] }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <!-- تقرير الحضور -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">سجل الحضور اليومي</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>المعلم</th>
+                                <th>الحصة</th>
+                                <th>الفصل</th>
+                                <th>وقت الدخول</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance %}
+                            <tr>
+                                <td>{{ record.teacher_name }}</td>
+                                <td>{{ record.class_name }}</td>
+                                <td>{{ record.classroom_name }}</td>
+                                <td>{{ record.entry_time }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">تقرير المناوبة اليومي</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>المعلم</th>
-                                        <th>نوع المناوبة</th>
-                                        <th>ملاحظات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in supervision %}
-                                    <tr>
-                                        <td>{{ record['teacher_name'] }}</td>
-                                        <td>{{ record['shift_type'] }}</td>
-                                        <td>{{ record['notes'] }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        </div>
+
+        <!-- تقرير المناوبة -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">سجل المناوبة اليومي</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>المعلم</th>
+                                <th>نوع المناوبة</th>
+                                <th>ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in supervision %}
+                            <tr>
+                                <td>{{ record.teacher_name }}</td>
+                                <td>{{ record.shift_type }}</td>
+                                <td>{{ record.notes }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

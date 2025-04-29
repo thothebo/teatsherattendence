@@ -8,9 +8,19 @@
 </head>
 <body>
     <div class="container mt-4">
+        <!-- شريط التنقل -->
         <ul class="nav nav-pills justify-content-center mb-4">
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('manage') }}">إدارة المعلمين والفصول</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('attendance') }}">تسجيل الحضور</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('supervision') }}">المناوبة</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('daily_report') }}">التقرير اليومي</a>
@@ -20,72 +30,63 @@
             </li>
         </ul>
 
-        <h1 class="text-center mb-4">
-            التقرير الأسبوعي
-            <br>
-            <small class="text-muted">
-                {{ start_date.strftime('%Y-%m-%d') }} إلى {{ end_date.strftime('%Y-%m-%d') }}
-            </small>
-        </h1>
+        <h2 class="text-center mb-4">التقرير الأسبوعي</h2>
+        <p class="text-center mb-4">من {{ start_date }} إلى {{ end_date }}</p>
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">ملخص الحضور الأسبوعي</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>المعلم</th>
-                                        <th>عدد الحصص</th>
-                                        <th>الفصول</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in attendance %}
-                                    <tr>
-                                        <td>{{ record['teacher_name'] }}</td>
-                                        <td>{{ record['attendance_count'] }}</td>
-                                        <td>{{ record['classrooms'] }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <!-- تقرير الحضور الأسبوعي -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">إحصائيات الحضور الأسبوعي</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>المعلم</th>
+                                <th>عدد مرات الحضور</th>
+                                <th>الفصول</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance %}
+                            <tr>
+                                <td>{{ record.teacher_name }}</td>
+                                <td>{{ record.attendance_count }}</td>
+                                <td>{{ record.classrooms }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">ملخص المناوبة الأسبوعي</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>المعلم</th>
-                                        <th>عدد المناوبات</th>
-                                        <th>أنواع المناوبات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in supervision %}
-                                    <tr>
-                                        <td>{{ record['teacher_name'] }}</td>
-                                        <td>{{ record['supervision_count'] }}</td>
-                                        <td>{{ record['shift_types'] }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        </div>
+
+        <!-- تقرير المناوبة الأسبوعي -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">إحصائيات المناوبة الأسبوعية</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>المعلم</th>
+                                <th>عدد المناوبات</th>
+                                <th>أنواع المناوبات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in supervision %}
+                            <tr>
+                                <td>{{ record.teacher_name }}</td>
+                                <td>{{ record.supervision_count }}</td>
+                                <td>{{ record.shift_types }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
